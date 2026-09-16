@@ -89,6 +89,11 @@ def make_prepare(edition = "opensource"):
   ]
   if common.sign:
     args += ["-Sign"]
+  if not branding.onlyoffice:
+    # branded builds are deployed under <build_prefix>/<branding_name>/DesktopEditors
+    args += ["-CompanyName", branding.company_name, "-ProductName", "DesktopEditors"]
+    if common.sign:
+      args += ["-CertName", branding.cert_name]
 
   utils.log_h2("desktop prepare " + edition)
   ret = utils.ps1("make.ps1", args, verbose=True)
@@ -104,6 +109,8 @@ def make_zip(edition = "opensource"):
     "-Arch", arch,
     "-Target", edition
   ]
+  if not branding.onlyoffice:
+    args += ["-CompanyName", branding.company_name, "-ProductName", "DesktopEditors"]
   # if common.sign:
   #   args += ["-Sign"]
 
