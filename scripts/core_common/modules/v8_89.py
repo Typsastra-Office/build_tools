@@ -7,6 +7,10 @@ import base
 import os
 import subprocess
 
+# Python 3 version pinned for depot_tools on all platforms.
+# Current depot_tools requires Python >= 3.9 (argparse.BooleanOptionalAction).
+DEPOT_TOOLS_PYTHON3_VERSION = "3.11.8.chromium.35"
+
 def clean():
   if base.is_dir("depot_tools"):
     base.delete_dir_with_access_error("depot_tools")
@@ -27,7 +31,9 @@ def clean():
   return
 
 def change_bootstrap():
-  base.move_file("./depot_tools/bootstrap/manifest.txt", "./depot_tools/bootstrap/manifest.txt.bak")
+  manifest = "./depot_tools/bootstrap/manifest.txt"
+  if base.is_file(manifest) and not base.is_file(manifest + ".bak"):
+    base.move_file(manifest, manifest + ".bak")
   content = "# changed by build_tools\n\n"
   content += "$VerifiedPlatform windows-amd64 windows-arm64 linux-amd64 mac-amd64 mac-arm64\n\n"
 
@@ -35,11 +41,7 @@ def change_bootstrap():
   content += "infra/3pp/tools/cpython/${platform} version:2@2.7.18.chromium.39\n\n"
 
   content += "@Subdir python3\n"
-
-  if ("windows" == base.host_platform()):
-    content += "infra/3pp/tools/cpython3/${platform} version:2@3.11.8.chromium.35\n\n"
-  else:
-    content += "infra/3pp/tools/cpython3/${platform} version:2@3.8.10.chromium.23\n\n"
+  content += "infra/3pp/tools/cpython3/${platform} version:2@" + DEPOT_TOOLS_PYTHON3_VERSION + "\n\n"
 
   content += "@Subdir git\n"
   content += "infra/3pp/tools/git/${platform} version:2@2.41.0.chromium.11\n"
@@ -50,7 +52,7 @@ def change_bootstrap():
   base.replaceInFile("./depot_tools/bootstrap/bootstrap.py", 
     "    _win_git_bootstrap_config()", "    #_win_git_bootstrap_config()")
   
-  base.writeFile("./depot_tools/bootstrap/manifest.txt", content)
+  base.writeFile(manifest, content)
   return
 
 def is_ubuntu_24_or_higher():
@@ -218,15 +220,23 @@ def make():
     
   if not base.is_dir("depot_tools"):
     base.cmd("git", ["clone", "https://chromium.googlesource.com/chromium/tools/depot_tools.git"])
-    change_bootstrap()
+  change_bootstrap()
 
   os.environ["PATH"] = base_dir + "/depot_tools" + os.pathsep + os.environ["PATH"]
 
   # depot_tools must be bootstrapped before fetch/gclient can run. Run it from
   # the depot_tools directory: the bootstrap scripts resolve their own paths
   # relative to the current directory and fail with a relative invocation.
-  if ("linux" == base.host_platform()) and not base.is_file("./depot_tools/python3_bin_reldir.txt"):
-    base.cmd_in_dir(os.path.abspath("depot_tools"), "./ensure_bootstrap", [], True)
+  if ("linux" == base.host_platform()):
+    need_bootstrap = True
+    reldir_file = "./depot_tools/python3_bin_reldir.txt"
+    if base.is_file(reldir_file):
+      try:
+        need_bootstrap = (DEPOT_TOOLS_PYTHON3_VERSION not in base.readFile(reldir_file))
+      except Exception:
+        need_bootstrap = True
+    if need_bootstrap:
+      base.cmd_in_dir(os.path.abspath("depot_tools"), "./ensure_bootstrap", [], True)
 
   if ("windows" == base.host_platform()):
     base.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
