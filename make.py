@@ -85,12 +85,22 @@ make_common.make()
 
 # build updmodule for desktop (only for windows version)
 if config.check_option("module", "desktop"):
-  config.extend_option("qmake_addon", "URL_WEBAPPS_HELP=https://download.onlyoffice.com/install/desktop/editors/help/v" + base.get_env('PRODUCT_VERSION') + "/apps")
+  # branding repos may override these through the environment
+  help_url = base.get_env("DESKTOP_URL_WEBAPPS_HELP")
+  if ("" == help_url):
+    help_url = "https://download.onlyoffice.com/install/desktop/editors/help/v" + base.get_env('PRODUCT_VERSION') + "/apps"
+  config.extend_option("qmake_addon", "URL_WEBAPPS_HELP=" + help_url)
 
   if "windows" == base.host_platform():
     config.extend_option("config", "updmodule")
-    base.set_env("DESKTOP_URL_UPDATES_MAIN_CHANNEL", "https://download.onlyoffice.com/install/desktop/editors/windows/onlyoffice/appcast.json")
-    base.set_env("DESKTOP_URL_UPDATES_DEV_CHANNEL", "https://download.onlyoffice.com/install/desktop/editors/windows/onlyoffice/appcastdev.json")
+    main_channel = base.get_env("DESKTOP_URL_UPDATES_MAIN_CHANNEL")
+    if ("" == main_channel):
+      main_channel = "https://download.onlyoffice.com/install/desktop/editors/windows/onlyoffice/appcast.json"
+    base.set_env("DESKTOP_URL_UPDATES_MAIN_CHANNEL", main_channel)
+    dev_channel = base.get_env("DESKTOP_URL_UPDATES_DEV_CHANNEL")
+    if ("" == dev_channel):
+      dev_channel = "https://download.onlyoffice.com/install/desktop/editors/windows/onlyoffice/appcastdev.json"
+    base.set_env("DESKTOP_URL_UPDATES_DEV_CHANNEL", dev_channel)
 
 # build
 build_sln.make()
