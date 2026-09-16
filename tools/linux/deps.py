@@ -68,18 +68,19 @@ def install_deps():
   else:
     print("OK")
     base.cmd("sudo", ["apt-get", "-y", "install", "npm", "yarn"], True)
-  base.cmd("sudo", ["npm", "install", "-g", "grunt-cli"])
-  base.cmd("sudo", ["npm", "install", "-g", "@yao-pkg/pkg@6.11.0"])
+  # --force: the CI images may already have these binaries installed
+  base.cmd("sudo", ["npm", "install", "-g", "--force", "grunt-cli"])
+  base.cmd("sudo", ["npm", "install", "-g", "--force", "@yao-pkg/pkg@6.11.0"])
 
-  # java
+  # java (required only for the builder/server modules; never fatal)
   java_error = base.cmd("sudo", ["apt-get", "-y", "install", "openjdk-11-jdk"], True)
   if (0 != java_error):
-    base.cmd("sudo", ["apt-get", "-y", "install", "software-properties-common"])
-    base.cmd("sudo", ["add-apt-repository", "-y", "ppa:openjdk-r/ppa"])
-    base.cmd("sudo", ["apt-get", "update"])
-    base.cmd("sudo", ["apt-get", "-y", "install", "openjdk-11-jdk"])
-    base.cmd("sudo", ["update-alternatives", "--config", "java"])
-    base.cmd("sudo", ["update-alternatives", "--config", "javac"])
+    base.cmd("sudo", ["apt-get", "-y", "install", "software-properties-common"], True)
+    base.cmd("sudo", ["add-apt-repository", "-y", "ppa:openjdk-r/ppa"], True)
+    base.cmd("sudo", ["apt-get", "update"], True)
+    base.cmd("sudo", ["apt-get", "-y", "install", "openjdk-11-jdk"], True)
+    base.cmd("sudo", ["update-alternatives", "--config", "java"], True)
+    base.cmd("sudo", ["update-alternatives", "--config", "javac"], True)
 
   base.writeFile("./packages_complete", "complete")
   return
