@@ -222,6 +222,12 @@ def make():
 
   os.environ["PATH"] = base_dir + "/depot_tools" + os.pathsep + os.environ["PATH"]
 
+  # depot_tools must be bootstrapped before fetch/gclient can run. Run it from
+  # the depot_tools directory: the bootstrap scripts resolve their own paths
+  # relative to the current directory and fail with a relative invocation.
+  if ("linux" == base.host_platform()) and not base.is_file("./depot_tools/python3_bin_reldir.txt"):
+    base.cmd_in_dir(os.path.abspath("depot_tools"), "./ensure_bootstrap", [], True)
+
   if ("windows" == base.host_platform()):
     base.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
     base.set_env("GYP_MSVS_VERSION", config.option("vs-version"))
@@ -242,9 +248,6 @@ def make():
     base.cmd("./depot_tools/gclient", ["sync", "-r", v8_branch_version], True)
     base.cmd("gclient", ["sync", "--force"], True)
     base.copy_dir("./v8/third_party_new/ninja", "./v8/third_party/ninja")
-    if ("linux" == base.host_platform()):
-      if not base.is_file("./depot_tools/python3_bin_reldir.txt"):
-        base.cmd_in_dir("./depot_tools", "./ensure_bootstrap", [], True)
 
   if ("windows" == base.host_platform()):
     base.replaceInFile("v8/build/config/win/BUILD.gn", ":static_crt", ":dynamic_crt")
