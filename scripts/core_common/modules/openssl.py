@@ -30,7 +30,9 @@ def make():
     openssl_mobile.make()
     return
 
-  if not base.is_dir("openssl"):
+  if not base.is_file("openssl/Configure"):
+    if base.is_dir("openssl"):
+      base.delete_dir_with_access_error("openssl")
     base.cmd("git", ["clone", "--depth=1", "--branch", "OpenSSL_1_1_1f", "https://github.com/openssl/openssl.git"])
 
   os.chdir(base_dir + "/openssl")
@@ -38,11 +40,18 @@ def make():
   old_cur_dir = base_dir.replace(" ", "\\ ")
   if ("windows" == base.host_platform()):
     old_cur_dir = base_dir.replace(" ", "\\ ")
-    if (-1 != config.option("platform").find("win_64")) and not base.is_dir("../build/win_64"):
+    if (-1 != config.option("platform").find("win_64")) and (not base.is_file("../build/win_64/include/openssl/sha.h") or not base.is_file("../build/win_64/lib/libssl.lib") or not base.is_file("../build/win_64/lib/libcrypto.lib")):
+      if base.is_dir("../build/win_64"):
+        base.delete_dir_with_access_error("../build/win_64")
       base.create_dir("./../build/win_64")
       qmake_bat = []
-      qmake_bat.append("call \"" + config.option("vs-path") + "/vcvarsall.bat\" x64")      
-      qmake_bat.append("perl Configure VC-WIN64A --prefix=" + old_cur_dir + "\\build\\win_64 --openssldir=" + old_cur_dir + "\\build\\win_64 no-shared no-asm enable-md2")
+      qmake_bat.append("call \"" + config.option("vs-path") + "/vcvarsall.bat\" x64 -vcvars_ver=14.29")
+      qmake_bat.append("set CC=")
+      qmake_bat.append("set CXX=")
+      qmake_bat.append("set AR=")
+      qmake_bat.append("set LD=")
+      qmake_bat.append("set RANLIB=")
+      qmake_bat.append("\"C:\\Strawberry\\perl\\bin\\perl.exe\" Configure VC-WIN64A --prefix=" + old_cur_dir + "\\build\\win_64 --openssldir=" + old_cur_dir + "\\build\\win_64 no-shared no-asm enable-md2")
       qmake_bat.append("call nmake clean")
       qmake_bat.append("call nmake build_libs install")
       base.run_as_bat(qmake_bat, True)

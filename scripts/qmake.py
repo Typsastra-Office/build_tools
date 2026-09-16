@@ -164,7 +164,7 @@ def make(platform, project, qmake_config_addon="", is_no_errors=False):
       qmake_bat.append("call nmake " + " ".join(distclean_params))
       qmake_bat.append("call \"" + qmake_app + "\" -nocache " + file_pro + config_params_string + qmake_addon_string)
     if ("0" != config.option("multiprocess")):
-      qmake_bat.append("set CL=/MP")
+      qmake_bat.append("set CL=/MP /Zc:lambda")
     qmake_bat.append("call nmake -f " + makefile)
     base.run_as_bat(qmake_bat, is_no_errors)
 

@@ -225,6 +225,9 @@ def make():
   if ("windows" == base.host_platform()):
     base.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
     base.set_env("GYP_MSVS_VERSION", config.option("vs-version"))
+    visual_studio_path = os.path.abspath(os.path.join(config.option("vs-path"), "../../.."))
+    base.set_env("vs2019_install", visual_studio_path)
+    base.set_env("GYP_MSVS_OVERRIDE_PATH", visual_studio_path)
 
   if not base.is_dir("v8"):
     base.cmd("./depot_tools/fetch", ["v8"], True)
@@ -251,9 +254,10 @@ def make():
     replace_src = "  def to_int_if_int(x):\n    try:\n      return int(x)\n    except ValueError:\n      return x"
     replace_dst = "  def to_int_if_int(x):\n    try:\n      return int(x)\n    except ValueError:\n      return 0"
     base.replaceInFile("v8/build/vs_toolchain.py", replace_src, replace_dst)
+    base.replaceInFile("v8/build/toolchain/win/setup_toolchain.py", "args = [script_path, cpu_arg, ]", "args = [script_path, cpu_arg, '-vcvars_ver=14.29', ]")
     
     
-    if not base.is_file("v8/src/base/platform/wrappers.cc"):
+    if not base.is_file("v8/src/base/platform/wrappers.cc"): 
       base.writeFile("v8/src/base/platform/wrappers.cc", "#include \"src/base/platform/wrappers.h\"\n")
   
     if config.check_option("platform", "win_arm64"):

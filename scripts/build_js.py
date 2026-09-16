@@ -126,7 +126,14 @@ def _run_build_py(directory, params=[]):
       directory_result = directory_branding
   if (base.is_file(directory_result + "/package.json")):
     _run_npm_ci(directory_result)
-  return base.cmd_in_dir(directory_result, "python", ["build.py"] + params)
+  if (base.is_file(directory_result + "/build.py")):
+    return base.cmd_in_dir(directory_result, "python", ["build.py"] + params)
+
+  grunt_params = [param for param in params if param != "--minimize"]
+  if "--no-minimize" in grunt_params:
+    grunt_params.remove("--no-minimize")
+    grunt_params += ["--level=WHITESPACE_ONLY", "--formatting=PRETTY_PRINT"]
+  return _run_grunt(directory_result, grunt_params)
 
 def build_interface(directory):
   _run_npm(directory)

@@ -99,7 +99,13 @@ def make():
 
       platform_args = args[platform]
 
-      compile_bat.append("call \"" + config.option("vs-path") + "/vcvarsall.bat\" " + platform_args['vcvarsall_arch'])
+      vcvarsall_args = platform_args['vcvarsall_arch']
+      if config.option("compiler") == "msvc2022" and platformToolset == "v142":
+        vcvarsall_args += " -vcvars_ver=14.29"
+      compile_bat.append("call \"" + config.option("vs-path") + "/vcvarsall.bat\" " + vcvarsall_args)
+      compile_bat.append("set INCLUDE=")
+      compile_bat.append("set LIB=")
+      compile_bat.append("set LIBPATH=")
       compile_bat.append("call MSBuild.exe " + source_dir + "/source/allinone/allinone.sln /p:Configuration=Release /p:PlatformToolset=" + platformToolset + " /p:Platform=" + platform_args['msbuild_platfrom'])
       compile_bat.append("endlocal")
       base.run_as_bat(compile_bat)

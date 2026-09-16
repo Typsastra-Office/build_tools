@@ -93,8 +93,8 @@ def make():
     if (-1 != config.option("platform").find("win_64")) and not base.is_file("../build/win_64/lib/libboost_system-" + win_vs_version + "-mt-x64-1_72.lib"):
       base.cmd("bootstrap.bat", [win_boot_arg])
       base.cmd("b2.exe", ["headers"])
-      base.cmd("b2.exe", ["--clean"])
-      base.cmd("b2.exe", ["--prefix=./../build/win_64", "link=static", "--with-filesystem", "--with-system", "--with-date_time", "--with-regex", "--toolset=" + win_toolset, "address-model=64", "install"])
+      base.cmd("b2.exe", ["--clean", "--toolset=" + win_toolset, "architecture=x86", "address-model=64"])
+      base.cmd("b2.exe", ["--prefix=./../build/win_64", "link=static", "--with-filesystem", "--with-system", "--with-date_time", "--with-regex", "--toolset=" + win_toolset, "architecture=x86", "address-model=64", "install"])
     if (-1 != config.option("platform").find("win_32")) and not base.is_file("../build/win_32/lib/libboost_system-" + win_vs_version + "-mt-x32-1_72.lib"):
       base.cmd("bootstrap.bat", [win_boot_arg])
       base.cmd("b2.exe", ["headers"])

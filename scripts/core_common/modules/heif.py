@@ -28,7 +28,9 @@ OLD_ENV = dict()
 
 def get_vs_version():
   vs_version = "14 2015"
-  if config.option("vs-version") == "2019":
+  if config.option("compiler") == "msvc2022":
+    vs_version = "17 2022"
+  elif config.option("vs-version") == "2019":
     vs_version = "16 2019"
   return vs_version
 
@@ -51,15 +53,20 @@ def build_with_cmake(platform, cmake_args, build_type):
   cmake_args_ext = []
   # WINDOWS
   if "win" in platform:
-    cmake_args_ext = [
-      "-G", f"Visual Studio {get_vs_version()}"
-    ]
-    if platform == "win_64" or platform == "win_64_xp":
-      cmake_args_ext += ["-A", "x64"]
-    elif platform == "win_32" or platform == "win_32_xp":
-      cmake_args_ext += ["-A", "Win32"]
-    elif platform == "win_arm64":
-      cmake_args_ext += ["-A", "ARM64"]
+    if config.option("compiler") == "msvc2022":
+      cmake_args_ext = [
+              "-G", "Ninja Multi-Config",
+              "-DCMAKE_C_COMPILER=cl.exe",
+              "-DCMAKE_CXX_COMPILER=cl.exe"
+            ]
+    else:
+      cmake_args_ext = ["-G", f"Visual Studio {get_vs_version()}"]
+      if platform == "win_64" or platform == "win_64_xp":
+        cmake_args_ext += ["-A", "x64"]
+      elif platform == "win_32" or platform == "win_32_xp":
+        cmake_args_ext += ["-A", "Win32"]
+      elif platform == "win_arm64":
+        cmake_args_ext += ["-A", "ARM64"]
   # LINUX, MAC
   elif "linux" in platform or "mac" in platform:
     cmake_args_ext = [

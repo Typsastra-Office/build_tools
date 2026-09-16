@@ -23,6 +23,11 @@ def download_and_extract(name):
   os.chdir("./qt_build/Qt-5.9.9")
   archive = SYSROOTS[name]
   folder = "./" + COMPILERS[name]
+  if (base.is_file(folder + "/bin/qmake")):
+    print("Qt is already fetched: " + folder)
+    os.chdir(cur_dir)
+    base.setup_local_qmake("./qt_build/Qt-5.9.9/" + COMPILERS[name] + "/bin")
+    return
   if (base.is_dir(folder)):
     base.delete_dir(folder)
   archive_file = "./" + archive
