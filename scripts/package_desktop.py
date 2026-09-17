@@ -94,7 +94,10 @@ def make_prepare(edition = "opensource"):
     args += ["-Sign"]
   if not branding.onlyoffice:
     # branded builds are deployed under <build_prefix>/<branding_name>/DesktopEditors
+    build_prefix = {"x64": "win_64", "x86": "win_32", "arm64": "win_arm64"}[arch]
     args += ["-CompanyName", branding.company_name, "-ProductName", "DesktopEditors"]
+    args += ["-SourceDir", os.path.abspath(common.workspace_dir + "/build_tools/out/"
+             + build_prefix + "/" + branding.company_name_l + "/DesktopEditors")]
     if common.sign:
       args += ["-CertName", branding.cert_name]
 
