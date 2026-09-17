@@ -55,8 +55,8 @@ if ("1" != base.get_env("OO_RUNNING_BRANDING")) and ("" != config.option("brandi
     base.check_build_version(branding_dir + "/build_tools")
     base.set_env("OO_RUNNING_BRANDING", "1")
     base.set_env("OO_BRANDING", config.option("branding"))
-    base.cmd_in_dir(branding_dir + "/build_tools", "python", ["make.py"])
-    exit(0)
+    ret = base.cmd_in_dir(branding_dir + "/build_tools", "python", ["make.py"])
+    exit(ret)
 
 # correct defaults (the branding repo is already updated)
 config.parse_defaults()
