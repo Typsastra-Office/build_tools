@@ -72,14 +72,15 @@ def make_windows():
     utils.set_summary("desktop inno standalone build", False)
     utils.set_summary("desktop advinst opensource build", False)
 
-  if branding.onlyoffice and make_prepare("commercial"):
-    make_zip("commercial")
-    make_inno("commercial")
-    make_advinst("commercial")
-  else:
-    utils.set_summary("desktop zip commercial build", False)
-    utils.set_summary("desktop inno commercial build", False)
-    utils.set_summary("desktop advinst commercial build", False)
+  if branding.onlyoffice:
+    if make_prepare("commercial"):
+      make_zip("commercial")
+      make_inno("commercial")
+      make_advinst("commercial")
+    else:
+      utils.set_summary("desktop zip commercial build", False)
+      utils.set_summary("desktop inno commercial build", False)
+      utils.set_summary("desktop advinst commercial build", False)
 
   utils.set_cwd(common.workspace_dir)
   return
