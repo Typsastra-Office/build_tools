@@ -63,6 +63,9 @@ def make_windows():
       make_inno()
       make_inno("standalone")
       make_advinst()
+    else:
+      # branded builds get the Inno installer from the branding overlay
+      make_inno()
   else:
     utils.set_summary("desktop zip opensource build", False)
     utils.set_summary("desktop inno opensource build", False)
@@ -136,6 +139,11 @@ def make_inno(edition = "opensource"):
   ]
   if common.sign:
     args += ["-Sign"]
+  if not branding.onlyoffice:
+    args += ["-BrandingDir", os.path.abspath("../../" + branding.company_name_l + "/desktop-apps/package"),
+             "-CompanyName", branding.company_name, "-ProductName", "DesktopEditors"]
+    if common.sign:
+      args += ["-CertName", branding.cert_name]
 
   utils.log_h2("desktop inno " + edition + " build")
   ret = utils.ps1("make_inno.ps1", args, verbose=True)
