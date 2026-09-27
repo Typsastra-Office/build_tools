@@ -44,6 +44,20 @@ if not exist "%QT_KIT%\lib\Qt6MultimediaWidgets.lib" (
 )
 
 :QT_READY
+rem libheif's bundled CMake project requires CMake >=3.21 and <4.0.
+python -c "import importlib.metadata as m,sys; sys.exit(0 if m.version('cmake') == '3.31.10' else 1)" >nul 2>&1
+if errorlevel 1 (
+  python -m pip install --user cmake==3.31.10
+  if errorlevel 1 exit /b %errorlevel%
+)
+for /f "usebackq tokens=*" %%i in (`python -c "import sysconfig; print(sysconfig.get_path('scripts', 'nt_user'))"`) do set "PY_USER_SCRIPTS=%%i"
+if defined PY_USER_SCRIPTS set "PATH=%PY_USER_SCRIPTS%;%PATH%"
+cmake --version | findstr /C:"3.31.10" >nul
+if errorlevel 1 (
+  echo Could not select the required CMake 3.31.10 executable.
+  exit /b 1
+)
+
 set "VSINSTALL="
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if not defined VSVCVARS if exist "%VSWHERE%" for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VSINSTALL=%%i"
