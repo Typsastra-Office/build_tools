@@ -20,7 +20,10 @@ def get_make_file_suffix(platform):
 
 def get_j_num():
   if ("0" != config.option("multiprocess")):
-    return ["-j" + str(multiprocessing.cpu_count())]
+    jobs = os.environ.get("QMAKE_BUILD_JOBS", "")
+    if not jobs.isdigit() or int(jobs) < 1:
+      jobs = str(multiprocessing.cpu_count())
+    return ["-j" + jobs]
   return []
 
 def check_support_platform(platform):
