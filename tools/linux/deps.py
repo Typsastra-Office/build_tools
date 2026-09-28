@@ -25,6 +25,7 @@ def install_deps():
               "libpulse-dev",
               "libtool",
               "p7zip-full",
+              "patchelf",
               "subversion",
               "gzip",
               "libasound2-dev",

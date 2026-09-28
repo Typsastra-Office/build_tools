@@ -986,6 +986,27 @@ def qt_copy_plugin(name, out):
 
   copy_dir(src, out + "/" + name)
 
+  if "linux" == host_platform():
+    # Qt's plugins are relocated from <prefix>/plugins/<category> to
+    # <application>/<category>, so their original $ORIGIN/../../lib RUNPATH
+    # no longer points at the bundled Qt libraries in the application root.
+    for plugin in glob.glob(out + "/" + name + "/*.so*"):
+      if is_file(plugin):
+        cmd("patchelf", ["--set-rpath", "\\$ORIGIN/..", plugin])
+
+    # libqxcb depends on these small X11 session libraries. Keep them with the
+    # portable bundle so a minimal desktop install can load the xcb backend.
+    if "platforms" == name:
+      ldconfig = run_command("ldconfig -p")
+      for library in ["libSM.so.6", "libICE.so.6"]:
+        source = ""
+        for line in ldconfig["stdout"].splitlines():
+          if line.strip().startswith(library + " ") and "=>" in line:
+            source = line.split("=>", 1)[1].strip()
+            break
+        if source:
+          copy_file(source, out + "/" + library)
+
   if ("windows" == host_platform()):
     for file in glob.glob(out + "/" + name + "/*d.dll"):
       fileCheck = file[0:-5] + ".dll"
