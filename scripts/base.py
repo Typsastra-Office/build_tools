@@ -992,7 +992,10 @@ def qt_copy_plugin(name, out):
     # no longer points at the bundled Qt libraries in the application root.
     for plugin in glob.glob(out + "/" + name + "/*.so*"):
       if is_file(plugin):
-        cmd("patchelf", ["--set-rpath", "\\$ORIGIN/..", plugin])
+        # Force DT_RPATH so the bundled root remains in the search path for
+        # indirect Qt dependencies such as ICU, not only the plugin's direct
+        # Qt libraries.
+        cmd("patchelf", ["--force-rpath", "--set-rpath", "\\$ORIGIN/..", plugin])
 
     # libqxcb depends on these small X11 session libraries. Keep them with the
     # portable bundle so a minimal desktop install can load the xcb backend.
