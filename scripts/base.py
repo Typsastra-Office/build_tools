@@ -1248,7 +1248,18 @@ def web_apps_addons_param():
 
 # common apps
 def download(url, dst):
-  return cmd_exe("curl", ["-L", "-o", dst, url])
+  # The 3dParty archives are hundreds of megabytes each and the connection is
+  # regularly reset mid-transfer, so retry and resume instead of failing the
+  # whole build. "-C -" is a no-op when nothing has been written yet, and makes
+  # curl pick up a partial file where the previous attempt stopped.
+  args = ["-L", "--retry", "5", "--retry-delay", "5", "--retry-all-errors", "--retry-connrefused", "-o", dst]
+  ret = cmd_exe("curl", args + ["-C", "-", url], True)
+  if (0 != ret) and is_file(dst):
+    # A server without range support makes the resume attempt fail outright;
+    # drop the partial file and fetch it in one go.
+    delete_file(dst)
+    ret = cmd_exe("curl", args + [url])
+  return ret
 
 def extract(src, dst, is_no_errors=False):
   app = "7za" if ("mac" == host_platform()) else "7z"
