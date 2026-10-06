@@ -1283,12 +1283,28 @@ def web_apps_addons_param():
   return params
 
 # common apps
+curl_retry_flags = None
+
+def get_curl_retry_flags():
+  global curl_retry_flags
+  if (None is curl_retry_flags):
+    curl_retry_flags = []
+    # --retry-all-errors needs curl 7.71 and --retry-connrefused needs 7.52.
+    # The curl shipped with the Windows runners predates them and aborts the
+    # whole transfer on an unknown option, so probe each flag before using it.
+    # The flag goes first because curl exits at --version, and the unknown
+    # option has to be seen before that.
+    for flag in ["--retry-all-errors", "--retry-connrefused"]:
+      if (0 == cmd_exe("curl", [flag, "--version"], True)):
+        curl_retry_flags.append(flag)
+  return curl_retry_flags
+
 def download(url, dst):
   # The 3dParty archives are hundreds of megabytes each and the connection is
   # regularly reset mid-transfer, so retry and resume instead of failing the
   # whole build. "-C -" is a no-op when nothing has been written yet, and makes
   # curl pick up a partial file where the previous attempt stopped.
-  args = ["-L", "--retry", "5", "--retry-delay", "5", "--retry-all-errors", "--retry-connrefused", "-o", dst]
+  args = ["-L", "--retry", "5", "--retry-delay", "5"] + get_curl_retry_flags() + ["-o", dst]
   ret = cmd_exe("curl", args + ["-C", "-", url], True)
   if (0 != ret) and is_file(dst):
     # A server without range support makes the resume attempt fail outright;
