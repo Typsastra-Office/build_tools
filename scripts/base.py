@@ -979,6 +979,33 @@ def qt_copy_icu(out, platform):
 
   return False
 
+def find_session_library_in_sysroot(library):
+  """Locate an X11 session library inside the linux sysroot.
+
+  Returns the path to the real (non-symlink) file so the bundled copy keeps a
+  genuine ELF object, or "" when the sysroot is not available.
+  """
+  platform_name = config.option("platform")
+  for use_platform in ("linux_64", "linux_arm64"):
+    if (0 != platform_name.find(use_platform)):
+      continue
+    sysroot_lib = config.get_custom_sysroot_lib(use_platform, True)
+    if ("" == sysroot_lib) or (not is_dir(sysroot_lib)):
+      continue
+
+    library_dir = os.path.dirname(sysroot_lib)
+    # Resolve the soname to the real file behind the .so.6 / .so symlinks.
+    candidates = [sysroot_lib, library_dir + "/lib", library_dir + "/lib64"]
+    for candidate_dir in candidates:
+      link = candidate_dir + "/" + library
+      if not is_exist(link):
+        continue
+      real = os.path.realpath(link)
+      if is_file(real):
+        return real
+
+  return ""
+
 def qt_copy_plugin(name, out):
   src = get_env("QT_DEPLOY") + "/../plugins/" + name
   if not is_dir(src):
@@ -1000,15 +1027,24 @@ def qt_copy_plugin(name, out):
     # libqxcb depends on these small X11 session libraries. Keep them with the
     # portable bundle so a minimal desktop install can load the xcb backend.
     if "platforms" == name:
-      ldconfig = run_command("ldconfig -p")
       for library in ["libSM.so.6", "libICE.so.6"]:
-        source = ""
-        for line in ldconfig["stdout"].splitlines():
-          if line.strip().startswith(library + " ") and "=>" in line:
-            source = line.split("=>", 1)[1].strip()
-            break
+        # Prefer the sysroot copies. Taking these from the build host makes the
+        # bundle inherit the host's glibc requirement (libICE on Ubuntu 22.04
+        # already needs GLIBC_2.33), so a package built on a newer release
+        # stops running on older ones. The sysroot ships the same sonames built
+        # against an older glibc, which keeps the bundle portable.
+        source = find_session_library_in_sysroot(library)
+        if ("" == source):
+          # No sysroot: fall back to the host so the bundle is still complete.
+          ldconfig = run_command("ldconfig -p")
+          for line in ldconfig["stdout"].splitlines():
+            if line.strip().startswith(library + " ") and "=>" in line:
+              source = line.split("=>", 1)[1].strip()
+              break
         if source:
           copy_file(source, out + "/" + library)
+        else:
+          print("Warning: could not find " + library + ", the xcb backend may fail to load.")
 
   if ("windows" == host_platform()):
     for file in glob.glob(out + "/" + name + "/*d.dll"):
@@ -1248,7 +1284,18 @@ def web_apps_addons_param():
 
 # common apps
 def download(url, dst):
-  return cmd_exe("curl", ["-L", "-o", dst, url])
+  # The 3dParty archives are hundreds of megabytes each and the connection is
+  # regularly reset mid-transfer, so retry and resume instead of failing the
+  # whole build. "-C -" is a no-op when nothing has been written yet, and makes
+  # curl pick up a partial file where the previous attempt stopped.
+  args = ["-L", "--retry", "5", "--retry-delay", "5", "--retry-all-errors", "--retry-connrefused", "-o", dst]
+  ret = cmd_exe("curl", args + ["-C", "-", url], True)
+  if (0 != ret) and is_file(dst):
+    # A server without range support makes the resume attempt fail outright;
+    # drop the partial file and fetch it in one go.
+    delete_file(dst)
+    ret = cmd_exe("curl", args + [url])
+  return ret
 
 def extract(src, dst, is_no_errors=False):
   app = "7za" if ("mac" == host_platform()) else "7z"

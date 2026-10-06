@@ -55,28 +55,39 @@ def change_bootstrap():
   base.writeFile(manifest, content)
   return
 
-def is_ubuntu_24_or_higher():
-  try:
-    with open('/etc/os-release') as f:
-      for line in f:
-        if line.startswith('VERSION_ID='):
-          version = line.split('=')[1].strip().strip('"')
-          return float(version) >= 24
-  except:
-      pass
-  return False
-
 def fix_ubuntu24():
-  #if not is_ubuntu_24_or_higher():
-  #  return
+  """Point the bundled LLVM libstdc++ at the system one.
 
+  The sysroot ships a libstdc++ that cannot satisfy V8, so the prebuilt toolchain
+  is redirected to the host library. The swap has to be idempotent: the previous
+  implementation ran "mv libstdc++.so.6 libstdc++.so.6.old" every time, which on a
+  second build moved the symlink it had just created over the real backup and
+  destroyed the original LLVM library. Only keep a genuine file as the backup and
+  never clobber one that is already there.
+  """
   if "" == config.option("sysroot"):
+    return
+
+  system_libstdcpp = "/usr/lib/x86_64-linux-gnu/libstdc++.so.6"
+  if not base.is_file(system_libstdcpp):
+    print("fix_ubuntu24: " + system_libstdcpp + " is missing, keeping the bundled libstdc++.")
     return
 
   old_cur = os.getcwd()
   os.chdir("third_party/llvm-build/Release+Asserts/lib")
-  base.cmd("mv", ["libstdc++.so.6", "libstdc++.so.6.old"])
-  base.cmd("ln", ["-s", "/usr/lib/x86_64-linux-gnu/libstdc++.so.6", "libstdc++.so.6"])
+  if os.path.islink("libstdc++.so.6.old"):
+    # A previous run already replaced the backup with a symlink; the original
+    # LLVM library is unrecoverable, so leave things as they are.
+    print("fix_ubuntu24: libstdc++.so.6.old is already a symlink, nothing to do.")
+    os.chdir(old_cur)
+    return
+  if os.path.islink("libstdc++.so.6"):
+    # Already redirected by an earlier build.
+    os.chdir(old_cur)
+    return
+  if not base.is_file("libstdc++.so.6.old"):
+    base.cmd("mv", ["libstdc++.so.6", "libstdc++.so.6.old"])
+  base.cmd("ln", ["-s", system_libstdcpp, "libstdc++.so.6"], True)
   os.chdir(old_cur)
   return
 
@@ -112,8 +123,10 @@ def make_args(args, platform, is_64=True, is_debug=False):
     if "" != config.option("sysroot"):
       args_copy.append("use_sysroot=true")
       args_copy.append("is_clang=false")
-      if is_ubuntu_24_or_higher():
-        args_copy.append("use_gold=false")
+      # The sysroot ships libc/libm/libpthread as linker scripts, which gold
+      # cannot parse, so every libc symbol ends up undefined. Always use the
+      # default bfd linker, not just on the hosts that happen to do so.
+      args_copy.append("use_gold=false")
       args_copy.append("sysroot=\\\"" + config.option("sysroot_linux_64") + "\\\"")
       args_copy.append("target_sysroot=\\\"" + config.option("sysroot_linux_64") + "\\\"")
     else:
@@ -126,8 +139,7 @@ def make_args(args, platform, is_64=True, is_debug=False):
   if platform == "linux_arm64":
     if "" != config.option("sysroot"):
       args_copy.append("use_sysroot=true")
-      if is_ubuntu_24_or_higher():
-        args_copy.append("use_gold=false")
+      args_copy.append("use_gold=false")
       #args_copy.append("sysroot=\\\"" + config.option("sysroot_linux_64") + "\\\"")
       args_copy.append("target_sysroot=\\\"" + config.option("sysroot_linux_arm64") + "\\\"")
     else:
@@ -289,9 +301,8 @@ def make():
 
   os.chdir("v8")
 
-  is_ubuntu24 = is_ubuntu_24_or_higher()
   fix_ubuntu24()
-  
+
   gn_args = ["v8_static_library=true",
              "is_component_build=false",
              "v8_monolithic=true",
