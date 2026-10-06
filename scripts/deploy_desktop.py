@@ -138,6 +138,17 @@ def make():
       isUseQt = False
 
     # libraries
+    if base.is_windows():
+      # The editor loads these DLLs beside editors.exe, while x2t loads the
+      # copies beside converter/x2t.exe. Keep both locations on the same build.
+      for name in ("kernel", "kernel_network", "UnicodeConverter", "graphics",
+                   "PdfFile", "DjVuFile", "XpsFile", "OFDFile", "HtmlFile2",
+                   "Fb2File", "EpubFile", "IWorkFile", "HWPFile", "DocxRenderer",
+                   "StarMathConverter", "ooxmlsignature", "doctrenderer"):
+        source = root_dir + "/converter/" + name + ".dll"
+        if not base.is_file(source):
+          raise RuntimeError("Missing desktop runtime DLL: " + source)
+        base.copy_file(source, root_dir + "/" + name + ".dll")
     base.copy_lib(build_libraries_path, root_dir, "hunspell")
     base.copy_lib(build_libraries_path + ("/xp" if isWindowsXP else ""), root_dir, "ascdocumentscore")
     if (0 != platform.find("mac")):

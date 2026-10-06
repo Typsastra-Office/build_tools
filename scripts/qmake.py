@@ -46,6 +46,19 @@ def make(platform, project, qmake_config_addon="", is_no_errors=False):
 
   # pro & makefile
   file_pro = os.path.abspath(project)
+  # A subst drive keeps deeply nested MSVC object paths below MAX_PATH. The
+  # workspace helpers resolve real paths, so restore the verified short alias
+  # before qmake derives its object directory and source paths.
+  alias = os.environ.get("OO_WINDOWS_BUILD_ROOT_ALIAS", "")
+  if base.is_windows() and alias:
+    workspace = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    alias = os.path.abspath(alias)
+    if not os.path.samefile(workspace, alias):
+      raise RuntimeError("OO_WINDOWS_BUILD_ROOT_ALIAS does not map to this workspace")
+    relative = os.path.relpath(file_pro, workspace)
+    if relative == os.pardir or relative.startswith(os.pardir + os.sep):
+      raise RuntimeError("qmake project is outside the aliased workspace: " + file_pro)
+    file_pro = os.path.join(alias, relative)
 
   pro_dir = os.path.dirname(file_pro)
   if (pro_dir.endswith("/.")):
